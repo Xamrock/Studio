@@ -4,9 +4,8 @@ A macOS application for recording iOS app interactions and generating automated 
 
 ## Requirements
 
-- **Development**: Requires Xcode and iOS Simulators
-- **Physical Devices**: Requires device to be connected and trusted
-- **Target Apps**: Can record any iOS app by bundle ID
+- Xcode
+- macOS +14.6
 
 ## License
 
