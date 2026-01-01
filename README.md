@@ -6,7 +6,7 @@ A macOS application for recording iOS app interactions and generating automated 
 
 ### Option 1: Download Pre-built Release (Recommended)
 
-1. Download the latest `Xamrock Studio.app.zip` from [Releases](https://github.com/YOUR_USERNAME/Studio/releases)
+1. Download the latest `Xamrock Studio.app.zip` from [Releases](https://github.com/Xamrock/Studio/releases)
 2. Unzip the downloaded file
 3. Move `Xamrock Studio.app` to your Applications folder
 4. Right-click the app and select "Open" to bypass Gatekeeper (first launch only)
