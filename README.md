@@ -24,7 +24,7 @@ A macOS application for recording iOS app interactions and generating automated 
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/Studio.git
+   git clone https://github.com/Xamrock/Studio.git
    cd Studio
    ```
 
