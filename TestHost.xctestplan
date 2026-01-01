@@ -1,0 +1,40 @@
+{
+  "configurations" : [
+    {
+      "id" : "BDB8FC95-07BE-4E9E-9D00-7F8F4EF2F61A",
+      "name" : "Configuration 1",
+      "options" : {
+        "environmentVariableEntries" : [
+          {
+            "key" : "PROMETHEUS_TARGET_BUNDLE_ID",
+            "value" : "$(PROMETHEUS_TARGET_BUNDLE_ID)"
+          },
+          {
+            "key" : "PROMETHEUS_COMMUNICATION_PATH",
+            "value" : "$(PROMETHEUS_COMMUNICATION_PATH)"
+          }
+        ]
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:Prometheus.xcodeproj",
+      "identifier" : "7CE815362EFBD05B00059085",
+      "name" : "TestHost"
+    }
+  },
+  "testTargets" : [
+    {
+      "skippedTests" : [
+        "TestHostUITests"
+      ],
+      "target" : {
+        "containerPath" : "container:Prometheus.xcodeproj",
+        "identifier" : "7CE8154C2EFBD05B00059085",
+        "name" : "TestHostUITests"
+      }
+    }
+  ],
+  "version" : 1
+}
