@@ -9,6 +9,7 @@ protocol RecordingSessionViewModelProtocol: ObservableObject {
     var isLoadingDevices: Bool { get }
     var isRecording: Bool { get }
     var isTestRunning: Bool { get }
+    var connectionStatus: String? { get }
     var capturedScreens: [CapturedScreen] { get set }
     var navigationEdges: [NavigationEdge] { get set }
     var flowGroups: [FlowGroup] { get set }

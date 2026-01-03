@@ -56,12 +56,22 @@ struct RecordSection: View {
                         ProgressView()
                             .scaleEffect(1.5)
                             .frame(width: 60, height: 60)
-                        Text("Connecting...")
+                        Text(viewModel.connectionStatus ?? "Connecting...")
                             .font(.title2)
                             .foregroundColor(.secondary)
-                        Text("Waiting for first screen capture")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        if viewModel.connectionStatus != nil {
+                            Text(viewModel.connectionStatus == "Connected!"
+                                ? "Capturing initial screen..."
+                                : "Please wait, this may take up to 60 seconds on first run")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 40)
+                        } else {
+                            Text("Waiting for first screen capture")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                         Spacer()
                     }
                 } else {

@@ -40,6 +40,7 @@ class RecordingSessionViewModel: ObservableObject, RecordingSessionViewModelProt
     // MARK: - Computed Properties
     var isRecording: Bool { sessionCoordinator.isRecording }
     var isTestRunning: Bool { sessionCoordinator.isTestRunning }
+    var connectionStatus: String? { sessionCoordinator.connectionStatus }
     var errorMessage: String? {
         get {
             sessionCoordinator.errorMessage
