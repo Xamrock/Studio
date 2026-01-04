@@ -10,34 +10,44 @@ struct ScrollableCanvas<Content: View>: NSViewRepresentable {
         self.content = content()
     }
 
-    func makeNSView(context: Context) -> NSHostingView<Content> {
-        let hostingView = ScrollCaptureHostingView(rootView: content, onScroll: onScroll)
-        return hostingView
+    func makeNSView(context: Context) -> NSView {
+        let hostingView = NSHostingView(rootView: content)
+        let wrapper = ScrollWrapperView(hostingView: hostingView, onScroll: onScroll)
+        return wrapper
     }
 
-    func updateNSView(_ nsView: NSHostingView<Content>, context: Context) {
-        nsView.rootView = content
+    func updateNSView(_ nsView: NSView, context: Context) {
+        if let wrapper = nsView as? ScrollWrapperView,
+           let hostingView = wrapper.hostingView as? NSHostingView<Content> {
+            hostingView.rootView = content
+        }
+    }
+}
+
+private class ScrollWrapperView: NSView {
+    let hostingView: NSView
+    let onScroll: (CGFloat, CGFloat) -> Void
+
+    init<Content: View>(hostingView: NSHostingView<Content>, onScroll: @escaping (CGFloat, CGFloat) -> Void) {
+        self.hostingView = hostingView
+        self.onScroll = onScroll
+        super.init(frame: .zero)
+
+        hostingView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(hostingView)
+        NSLayoutConstraint.activate([
+            hostingView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            hostingView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            hostingView.topAnchor.constraint(equalTo: topAnchor),
+            hostingView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
     }
 
-    class ScrollCaptureHostingView<Content: View>: NSHostingView<Content> {
-        let onScroll: (CGFloat, CGFloat) -> Void
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
 
-        init(rootView: Content, onScroll: @escaping (CGFloat, CGFloat) -> Void) {
-            self.onScroll = onScroll
-            super.init(rootView: rootView)
-        }
-
-        required init(rootView: Content) {
-            fatalError("Use init(rootView:onScroll:)")
-        }
-
-        @MainActor required dynamic init?(coder aDecoder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-
-        override func scrollWheel(with event: NSEvent) {
-            onScroll(event.scrollingDeltaX, event.scrollingDeltaY)
-
-        }
+    override func scrollWheel(with event: NSEvent) {
+        onScroll(event.scrollingDeltaX, event.scrollingDeltaY)
     }
 }
