@@ -14,6 +14,9 @@ on:
 jobs:
   build-and-release:
     runs-on: macos-14
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -208,17 +211,17 @@ jobs:
           echo "EOF" >> $GITHUB_ENV
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ env.VERSION }}
-          name: Xamrock Studio v${{ env.VERSION }}
-          body: ${{ env.RELEASE_NOTES }}
-          draft: false
-          prerelease: false
-          files: |
-            Build/Distribution/Xamrock-Studio-${{ env.VERSION }}*.zip
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd Build/Distribution
+
+          # Create release with notes from file
+          gh release create "v${{ env.VERSION }}" \
+            --repo Xamrock/Studio \
+            --title "Xamrock Studio v${{ env.VERSION }}" \
+            --notes "${{ env.RELEASE_NOTES }}" \
+            Xamrock-Studio-${{ env.VERSION }}*.zip
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
