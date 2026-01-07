@@ -47,14 +47,7 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Build unsigned release package
-        run: |
-          cd Scripts
-          chmod +x package-release.sh
-          ./package-release.sh "${{ env.VERSION }}"
-
-      - name: Build signed release package
-        if: ${{ secrets.SIGNING_IDENTITY != '' }}
+      - name: Build release package
         env:
           SIGNING_IDENTITY: ${{ secrets.SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -62,6 +55,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           cd Scripts
+          chmod +x package-release.sh
           ./package-release.sh "${{ env.VERSION }}"
 
       - name: Calculate checksums
