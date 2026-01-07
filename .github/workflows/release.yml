@@ -30,11 +30,8 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Install Android SDK
-        run: |
-          brew install android-sdk
-          echo "ANDROID_HOME=/usr/local/share/android-sdk" >> $GITHUB_ENV
-          echo "/usr/local/share/android-sdk/platform-tools" >> $GITHUB_PATH
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Extract version number
         id: version
