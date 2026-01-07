@@ -31,7 +31,7 @@ xcodebuild build-for-testing \
     -scheme TestHost \
     -configuration "${CONFIGURATION}" \
     -derivedDataPath "${DERIVED_DATA_PATH}" \
-    -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+    -destination 'generic/platform=iOS Simulator' \
     -only-testing:TestHostUITests \
     ONLY_ACTIVE_ARCH=NO \
     ENABLE_TESTABILITY=YES
