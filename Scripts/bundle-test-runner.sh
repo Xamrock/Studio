@@ -34,7 +34,10 @@ xcodebuild build-for-testing \
     -destination 'generic/platform=iOS Simulator' \
     -only-testing:TestHostUITests \
     ONLY_ACTIVE_ARCH=NO \
-    ENABLE_TESTABILITY=YES
+    ENABLE_TESTABILITY=YES \
+    CODE_SIGN_IDENTITY="" \
+    CODE_SIGNING_REQUIRED=NO \
+    CODE_SIGNING_ALLOWED=NO
 
 echo "Building TestHost for iOS Device..."
 xcodebuild build-for-testing \
@@ -45,7 +48,10 @@ xcodebuild build-for-testing \
     -destination 'generic/platform=iOS' \
     -only-testing:TestHostUITests \
     ONLY_ACTIVE_ARCH=NO \
-    ENABLE_TESTABILITY=YES
+    ENABLE_TESTABILITY=YES \
+    CODE_SIGN_IDENTITY="" \
+    CODE_SIGNING_REQUIRED=NO \
+    CODE_SIGNING_ALLOWED=NO
 
 echo "Creating TestRunner directories in app bundle..."
 TESTRUNNER_DIR="${APP_PATH}/Contents/Resources/TestRunner"
