@@ -6,7 +6,7 @@
 //
 
 import Testing
-@testable import TestHost
+//@testable import TestHost
 
 struct TestHostTests {
 
@@ -15,3 +15,4 @@ struct TestHostTests {
     }
 
 }
+

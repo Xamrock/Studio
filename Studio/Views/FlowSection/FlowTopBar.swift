@@ -30,6 +30,33 @@ struct FlowTopBar: View {
                 .frame(height: 20)
 
             Button {
+                viewModel.undo(graphViewModel: graphViewModel)
+            } label: {
+                Image(systemName: "arrow.uturn.backward")
+                    .font(.callout)
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut("z", modifiers: .command)
+            .disabled(!graphViewModel.canUndo())
+            .opacity(graphViewModel.canUndo() ? 1.0 : 0.4)
+            .help("Undo (⌘Z)")
+
+            Button {
+                viewModel.redo(graphViewModel: graphViewModel)
+            } label: {
+                Image(systemName: "arrow.uturn.forward")
+                    .font(.callout)
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut("z", modifiers: [.command, .shift])
+            .disabled(!graphViewModel.canRedo())
+            .opacity(graphViewModel.canRedo() ? 1.0 : 0.4)
+            .help("Redo (⌘⇧Z)")
+
+            Divider()
+                .frame(height: 20)
+
+            Button {
                 showFlowGroupsPanel.toggle()
             } label: {
                 HStack(spacing: 4) {

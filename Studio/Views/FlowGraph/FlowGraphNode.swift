@@ -4,6 +4,7 @@ struct FlowGraphNode: View {
     let screen: CapturedScreen
     let isSelected: Bool
     var isEdgeCreationSource: Bool = false
+    var isDropTarget: Bool = false
     var flowGroups: [FlowGroup] = []  // Multiple groups supported
     let onTap: () -> Void
     let onDelete: () -> Void
@@ -13,6 +14,34 @@ struct FlowGraphNode: View {
     let availableGroups: [FlowGroup]
 
     @State private var isDragging = false
+
+    // Computed properties for styling
+    private var strokeColor: Color {
+        if isDropTarget { return .green }
+        if isEdgeCreationSource { return .orange }
+        if isSelected { return .blue }
+        return flowGroups.first?.color.color.opacity(0.6) ?? Color.gray.opacity(0.3)
+    }
+
+    private var strokeWidth: CGFloat {
+        if isDropTarget { return 5 }
+        if isEdgeCreationSource { return 4 }
+        if isSelected { return 3 }
+        return flowGroups.isEmpty ? 1 : 2
+    }
+
+    private var shadowColor: Color {
+        if isDropTarget { return Color.green.opacity(0.8) }
+        if isEdgeCreationSource { return Color.orange.opacity(0.4) }
+        return flowGroups.first?.color.color.opacity(0.2) ?? Color.black.opacity(0.1)
+    }
+
+    private var shadowRadius: CGFloat {
+        if isDropTarget { return 20 }
+        if isEdgeCreationSource { return 12 }
+        if isSelected { return 8 }
+        return flowGroups.isEmpty ? 4 : 6
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -89,20 +118,9 @@ struct FlowGraphNode: View {
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(
-                    isEdgeCreationSource ? Color.orange :
-                    (isSelected ? Color.blue :
-                    (flowGroups.first?.color.color.opacity(0.6) ?? Color.gray.opacity(0.3))),
-                    lineWidth: isEdgeCreationSource ? 4 : (isSelected ? 3 : (!flowGroups.isEmpty ? 2 : 1))
-                )
+                .stroke(strokeColor, lineWidth: strokeWidth)
         )
-        .shadow(
-            color: isEdgeCreationSource ? Color.orange.opacity(0.4) :
-                   (flowGroups.first?.color.color.opacity(0.2) ?? Color.black.opacity(0.1)),
-            radius: isEdgeCreationSource ? 12 : (isSelected ? 8 : (!flowGroups.isEmpty ? 6 : 4)),
-            x: 0,
-            y: 2
-        )
+        .shadow(color: shadowColor, radius: shadowRadius, x: 0, y: 2)
         .overlay(alignment: .topTrailing) {
             if flowGroups.count > 1 {
                 HStack(spacing: 3) {

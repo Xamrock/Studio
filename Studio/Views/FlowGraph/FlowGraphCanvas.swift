@@ -9,6 +9,7 @@ struct FlowGraphCanvas: View {
     @State private var startZoom: CGFloat = 1.0
     @State private var draggedScreenId: UUID?
     @State private var dragStartPosition: CGPoint = .zero
+    @State private var dropTargetId: UUID?
 
     var body: some View {
         GeometryReader { geometry in
@@ -65,6 +66,7 @@ struct FlowGraphCanvas: View {
                         screen: screen,
                         isSelected: graphViewModel.selectedNodeIds.contains(screen.id),
                         isEdgeCreationSource: graphViewModel.edgeCreationSourceId == screen.id,
+                        isDropTarget: dropTargetId == screen.id,
                         flowGroups: flowGroups,
                         onTap: {
                             if graphViewModel.currentTool == .addEdge {
@@ -107,10 +109,25 @@ struct FlowGraphCanvas: View {
                                         startPosition: dragStartPosition,
                                         translation: value.translation
                                     )
+
+                                    // Check for drop target (node overlap)
+                                    if let draggedId = draggedScreenId,
+                                       let draggedScreen = viewModel.capturedScreens.first(where: { $0.id == draggedId }) {
+                                        let draggedPos = draggedScreen.graphPosition ?? defaultPosition(for: draggedScreen, in: geometry.size)
+                                        dropTargetId = detectDropTarget(
+                                            draggedScreenId: draggedId,
+                                            draggedPosition: draggedPos,
+                                            geometry: geometry
+                                        )
+                                    }
                                 }
                             }
                             .onEnded { _ in
+                                if let draggedId = draggedScreenId, let targetId = dropTargetId {
+                                    viewModel.mergeNodes(draggedNodeId: draggedId, targetNodeId: targetId, graphViewModel: graphViewModel)
+                                }
                                 draggedScreenId = nil
+                                dropTargetId = nil
                             }
                     )
                 }
@@ -150,6 +167,14 @@ struct FlowGraphCanvas: View {
             }
             .onTapGesture { location in
                 graphViewModel.deselectAll()
+            }
+            .onDeleteCommand {
+                // Delete selected nodes
+                for nodeId in graphViewModel.selectedNodeIds {
+                    if let screen = viewModel.capturedScreens.first(where: { $0.id == nodeId }) {
+                        deleteScreen(screen)
+                    }
+                }
             }
         }
 
@@ -307,6 +332,39 @@ struct FlowGraphCanvas: View {
         }
     }
 
+    private func detectDropTarget(draggedScreenId: UUID, draggedPosition: CGPoint, geometry: GeometryProxy) -> UUID? {
+        let nodeWidth: CGFloat = 180
+        let nodeHeight: CGFloat = 260
+
+        // Calculate dragged node bounds (in canvas coordinates)
+        let draggedBounds = CGRect(
+            x: draggedPosition.x - nodeWidth / 2,
+            y: draggedPosition.y - nodeHeight / 2,
+            width: nodeWidth,
+            height: nodeHeight
+        )
+
+        // Check for overlap with other nodes
+        for screen in viewModel.capturedScreens {
+            guard screen.id != draggedScreenId else { continue }
+
+            let screenPos = screen.graphPosition ?? defaultPosition(for: screen, in: geometry.size)
+            let screenBounds = CGRect(
+                x: screenPos.x - nodeWidth / 2,
+                y: screenPos.y - nodeHeight / 2,
+                width: nodeWidth,
+                height: nodeHeight
+            )
+
+            // Check if bounds intersect (with some threshold for better UX)
+            if draggedBounds.intersects(screenBounds) {
+                return screen.id
+            }
+        }
+
+        return nil
+    }
+
     @ViewBuilder
     private func edgeLabelView(for edge: NavigationEdge, source: CapturedScreen, target: CapturedScreen) -> some View {
         let sourcePos = source.graphPosition ?? CGPoint(x: 400, y: 200)
@@ -340,6 +398,9 @@ struct FlowGraphCanvas: View {
     }
 
     private func deleteScreen(_ screen: CapturedScreen) {
+        // Capture state before deletion for undo functionality
+        graphViewModel.captureState(screens: viewModel.capturedScreens, edges: viewModel.navigationEdges)
+
         viewModel.capturedScreens.removeAll { $0.id == screen.id }
 
         viewModel.navigationEdges.removeAll { edge in

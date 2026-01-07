@@ -22,13 +22,20 @@ class FlowGraphViewModel: ObservableObject {
     @Published var editingScreenId: UUID?
     @Published var showEditScreenNameSheet: Bool = false
 
-    private var undoStack: [GraphState] = []
-    private var redoStack: [GraphState] = []
+    private var undoStack: [GraphSnapshot] = []
+    private var redoStack: [GraphSnapshot] = []
+    private let maxUndoStackSize = 50
 
     enum CanvasTool {
         case select
         case pan
         case addEdge
+    }
+
+    struct GraphSnapshot {
+        let screens: [CapturedScreen]
+        let edges: [NavigationEdge]
+        let timestamp: Date
     }
 
     func handleNodeClickForEdgeCreation(screenId: UUID) {
@@ -53,11 +60,6 @@ class FlowGraphViewModel: ObservableObject {
         edgeCreationTargetId = nil
     }
 
-    struct GraphState {
-        let positions: [UUID: CGPoint]
-        let zoom: CGFloat
-        let offset: CGPoint
-    }
 
     func initializePositions(screens: inout [CapturedScreen], edges: [NavigationEdge]) {
         let hasPositions = screens.contains { $0.graphPosition != nil }
@@ -126,11 +128,58 @@ class FlowGraphViewModel: ObservableObject {
         showEdgeEditSheet = true
     }
 
-    func undo() {
-        guard !undoStack.isEmpty else { return }
+    func captureState(screens: [CapturedScreen], edges: [NavigationEdge]) {
+        let snapshot = GraphSnapshot(
+            screens: screens,
+            edges: edges,
+            timestamp: Date()
+        )
+
+        undoStack.append(snapshot)
+
+        // Limit stack size to prevent memory issues
+        if undoStack.count > maxUndoStackSize {
+            undoStack.removeFirst()
+        }
+
+        // Clear redo stack when new action is performed
+        redoStack.removeAll()
     }
 
-    func redo() {
-        guard !redoStack.isEmpty else { return }
+    func canUndo() -> Bool {
+        return !undoStack.isEmpty
+    }
+
+    func canRedo() -> Bool {
+        return !redoStack.isEmpty
+    }
+
+    func undo(currentScreens: [CapturedScreen], currentEdges: [NavigationEdge]) -> (screens: [CapturedScreen], edges: [NavigationEdge])? {
+        guard !undoStack.isEmpty else { return nil }
+
+        // Save current state to redo stack
+        let currentSnapshot = GraphSnapshot(
+            screens: currentScreens,
+            edges: currentEdges,
+            timestamp: Date()
+        )
+        redoStack.append(currentSnapshot)
+
+        // Pop from undo stack
+        let previousSnapshot = undoStack.removeLast()
+        return (screens: previousSnapshot.screens, edges: previousSnapshot.edges)
+    }
+
+    func redo() -> (screens: [CapturedScreen], edges: [NavigationEdge])? {
+        guard !redoStack.isEmpty else { return nil }
+
+        // Pop from redo stack
+        let nextSnapshot = redoStack.removeLast()
+        return (screens: nextSnapshot.screens, edges: nextSnapshot.edges)
+    }
+
+    func clearUndoHistory() {
+        undoStack.removeAll()
+        redoStack.removeAll()
     }
 }
