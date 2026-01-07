@@ -144,25 +144,47 @@ if [ "$IS_SIGNED" = true ]; then
     else
         echo "Submitting ${ZIP_NAME} for notarization..."
 
-        # Submit for notarization
-        xcrun notarytool submit "${ZIP_NAME}" \
+        # Submit for notarization and capture the submission ID
+        SUBMISSION_OUTPUT=$(xcrun notarytool submit "${ZIP_NAME}" \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_ID_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
-            --wait
+            --wait 2>&1)
 
-        echo "Notarization complete!"
+        NOTARIZE_EXIT_CODE=$?
+        echo "$SUBMISSION_OUTPUT"
 
-        # Unzip, staple, and re-zip
-        echo "Stapling notarization ticket..."
-        unzip -q "${ZIP_NAME}"
-        xcrun stapler staple "${APP_NAME}"
+        if [ $NOTARIZE_EXIT_CODE -eq 0 ]; then
+            echo "✅ Notarization succeeded!"
 
-        # Re-create the ZIP with stapled ticket
-        rm "${ZIP_NAME}"
-        zip -qr -X "${ZIP_NAME}" "${APP_NAME}"
+            # Unzip, staple, and re-zip
+            echo "Stapling notarization ticket..."
+            unzip -o -q "${ZIP_NAME}"
+            xcrun stapler staple "${APP_NAME}"
 
-        echo "✅ Notarization ticket stapled successfully"
+            # Re-create the ZIP with stapled ticket
+            rm "${ZIP_NAME}"
+            zip -qr -X "${ZIP_NAME}" "${APP_NAME}"
+
+            echo "✅ Notarization ticket stapled successfully"
+        else
+            echo "❌ Notarization failed!"
+
+            # Try to get the submission ID from output to fetch logs
+            SUBMISSION_ID=$(echo "$SUBMISSION_OUTPUT" | grep "id:" | head -1 | awk '{print $2}')
+
+            if [ -n "$SUBMISSION_ID" ]; then
+                echo "Fetching notarization log for submission: $SUBMISSION_ID"
+                xcrun notarytool log "$SUBMISSION_ID" \
+                    --apple-id "$APPLE_ID" \
+                    --password "$APPLE_ID_PASSWORD" \
+                    --team-id "$APPLE_TEAM_ID"
+            fi
+
+            echo ""
+            echo "⚠️  Continuing with signed but unnotarized build"
+            echo "⚠️  Users will see security warnings when opening the app"
+        fi
     fi
 fi
 
