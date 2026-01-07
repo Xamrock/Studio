@@ -30,11 +30,8 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Install Android SDK
-        run: |
-          brew install android-sdk
-          echo "ANDROID_HOME=/usr/local/share/android-sdk" >> $GITHUB_ENV
-          echo "/usr/local/share/android-sdk/platform-tools" >> $GITHUB_PATH
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Extract version number
         id: version
@@ -47,14 +44,7 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Build unsigned release package
-        run: |
-          cd Scripts
-          chmod +x package-release.sh
-          ./package-release.sh "${{ env.VERSION }}"
-
-      - name: Build signed release package
-        if: ${{ secrets.SIGNING_IDENTITY != '' }}
+      - name: Build release package
         env:
           SIGNING_IDENTITY: ${{ secrets.SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -62,6 +52,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           cd Scripts
+          chmod +x package-release.sh
           ./package-release.sh "${{ env.VERSION }}"
 
       - name: Calculate checksums
@@ -88,18 +79,24 @@ jobs:
       - name: Create Release Notes
         id: release_notes
         run: |
-          cat > release_notes.md << 'EOF'
-          ## Xamrock Studio v${{ env.VERSION }}
+          VERSION="${{ env.VERSION }}"
+          UNSIGNED_SHA="${{ steps.checksums.outputs.unsigned_sha256 }}"
+          SIGNED_SHA="${{ steps.checksums.outputs.signed_sha256 }}"
+          HAS_SIGNED="${{ steps.checksums.outputs.has_signed }}"
+          HAS_UNSIGNED="${{ steps.checksums.outputs.has_unsigned }}"
+
+          cat > release_notes.md << EOF
+          ## Xamrock Studio v${VERSION}
 
           ### 📥 Downloads
 
           EOF
 
           # Add signed version if available
-          if [ "${{ steps.checksums.outputs.has_signed }}" = "true" ]; then
-            cat >> release_notes.md << 'EOF'
+          if [ "$HAS_SIGNED" = "true" ]; then
+            cat >> release_notes.md << EOF
           **Recommended: Signed & Notarized** (Best for non-technical users)
-          - Download: `Xamrock-Studio-${{ env.VERSION }}-Signed.zip`
+          - Download: \`Xamrock-Studio-${VERSION}-Signed.zip\`
           - ✅ **No security warnings** - Double-click to install
           - ✅ Verified by Apple
           - 📦 Includes iOS & Android test frameworks
@@ -108,10 +105,10 @@ jobs:
           fi
 
           # Add unsigned version
-          if [ "${{ steps.checksums.outputs.has_unsigned }}" = "true" ]; then
-            cat >> release_notes.md << 'EOF'
+          if [ "$HAS_UNSIGNED" = "true" ]; then
+            cat >> release_notes.md << EOF
           **Open Source Build** (For developers & contributors)
-          - Download: `Xamrock-Studio-${{ env.VERSION }}.zip`
+          - Download: \`Xamrock-Studio-${VERSION}.zip\`
           - ⚠️ Requires manual security approval (see instructions below)
           - 📦 Includes iOS & Android test frameworks
 
@@ -125,10 +122,10 @@ jobs:
           EOF
 
           # Signed version instructions
-          if [ "${{ steps.checksums.outputs.has_signed }}" = "true" ]; then
-            cat >> release_notes.md << 'EOF'
+          if [ "$HAS_SIGNED" = "true" ]; then
+            cat >> release_notes.md << EOF
           **Signed Version:**
-          1. Download `Xamrock-Studio-${{ env.VERSION }}-Signed.zip`
+          1. Download \`Xamrock-Studio-${VERSION}-Signed.zip\`
           2. Double-click to extract
           3. Drag **Xamrock Studio.app** to Applications folder
           4. Double-click to open - **no additional steps needed!** ✨
@@ -137,10 +134,10 @@ jobs:
           fi
 
           # Unsigned version instructions
-          if [ "${{ steps.checksums.outputs.has_unsigned }}" = "true" ]; then
-            cat >> release_notes.md << 'EOF'
+          if [ "$HAS_UNSIGNED" = "true" ]; then
+            cat >> release_notes.md << EOF
           **Unsigned Version:**
-          1. Download `Xamrock-Studio-${{ env.VERSION }}.zip`
+          1. Download \`Xamrock-Studio-${VERSION}.zip\`
           2. Double-click to extract
           3. Drag **Xamrock Studio.app** to Applications folder
           4. **Right-click** the app → Select **"Open"** → Click **"Open"** in the dialog
@@ -169,7 +166,7 @@ jobs:
           - Xcode 14.0 or later
 
           **Android Testing**
-          - Android SDK Platform Tools (`adb`)
+          - Android SDK Platform Tools (\`adb\`)
           - Java JDK 17 or later
 
           ### 🔒 Checksums
@@ -178,22 +175,22 @@ jobs:
 
           EOF
 
-          if [ "${{ steps.checksums.outputs.has_signed }}" = "true" ]; then
-            cat >> release_notes.md << 'EOF'
+          if [ "$HAS_SIGNED" = "true" ]; then
+            cat >> release_notes.md << EOF
           **Signed version:**
-          ```
-          ${{ steps.checksums.outputs.signed_sha256 }}  Xamrock-Studio-${{ env.VERSION }}-Signed.zip
-          ```
+          \`\`\`
+          ${SIGNED_SHA}  Xamrock-Studio-${VERSION}-Signed.zip
+          \`\`\`
 
           EOF
           fi
 
-          if [ "${{ steps.checksums.outputs.has_unsigned }}" = "true" ]; then
-            cat >> release_notes.md << 'EOF'
+          if [ "$HAS_UNSIGNED" = "true" ]; then
+            cat >> release_notes.md << EOF
           **Unsigned version:**
-          ```
-          ${{ steps.checksums.outputs.unsigned_sha256 }}  Xamrock-Studio-${{ env.VERSION }}.zip
-          ```
+          \`\`\`
+          ${UNSIGNED_SHA}  Xamrock-Studio-${VERSION}.zip
+          \`\`\`
 
           EOF
           fi
@@ -206,11 +203,9 @@ jobs:
           ```
           EOF
 
-          # Expand variables in the markdown
-          eval "echo \"$(cat release_notes.md)\"" > release_notes_final.md
-
+          # Set output
           echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
-          cat release_notes_final.md >> $GITHUB_ENV
+          cat release_notes.md >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
       - name: Create GitHub Release

@@ -56,7 +56,10 @@ xcodebuild archive \
     -archivePath "${ARCHIVE_PATH}" \
     -derivedDataPath "${BUILD_DIR}" \
     -arch arm64 \
-    SKIP_INSTALL=NO
+    SKIP_INSTALL=NO \
+    CODE_SIGN_IDENTITY="" \
+    CODE_SIGNING_REQUIRED=NO \
+    CODE_SIGNING_ALLOWED=NO
 
 # Step 2: Export the app bundle
 echo ""
