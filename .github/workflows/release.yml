@@ -35,6 +35,43 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Import Code Signing Certificate
+        env:
+          CERTIFICATES_P12: ${{ secrets.CERTIFICATES_P12 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+        run: |
+          # Create temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/build.keychain
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+
+          # Decode certificate
+          echo "$CERTIFICATES_P12" | base64 --decode > $RUNNER_TEMP/certificate.p12
+
+          # Create and unlock keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Import certificate
+          security import $RUNNER_TEMP/certificate.p12 \
+            -k "$KEYCHAIN_PATH" \
+            -P "$P12_PASSWORD" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/productsign
+
+          # Set partition list to avoid prompts
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Add to keychain search list
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | sed s/\"//g)
+
+          # Verify certificate is available
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+          # Clean up certificate file
+          rm $RUNNER_TEMP/certificate.p12
+
       - name: Extract version number
         id: version
         run: |
@@ -212,7 +249,7 @@ jobs:
 
       - name: Create GitHub Release
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           cd Build/Distribution
 
@@ -229,3 +266,11 @@ jobs:
           name: xamrock-studio-${{ env.VERSION }}
           path: Build/Distribution/*.zip
           retention-days: 90
+
+      - name: Clean up keychain
+        if: always()
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/build.keychain
+          if [ -f "$KEYCHAIN_PATH" ]; then
+            security delete-keychain "$KEYCHAIN_PATH"
+          fi
