@@ -14,9 +14,6 @@ on:
 jobs:
   build-and-release:
     runs-on: macos-14
-    permissions:
-      contents: write  # Required to create releases and upload assets
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -221,7 +218,7 @@ jobs:
           files: |
             Build/Distribution/Xamrock-Studio-${{ env.VERSION }}*.zip
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
