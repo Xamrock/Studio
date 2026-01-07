@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# Use Android Studio's Gradle if available
+ANDROID_STUDIO_GRADLE="/Applications/Android Studio.app/Contents/gradle/gradle-8.5/bin/gradle"
+
+if [ -f "$ANDROID_STUDIO_GRADLE" ]; then
+    exec "$ANDROID_STUDIO_GRADLE" "$@"
+else
+    echo "Please build using Android Studio:"
+    echo "1. Open AndroidTestHost folder in Android Studio"
+    echo "2. Run: ./gradlew assembleDebug assembleDebugAndroidTest"
+    exit 1
+fi

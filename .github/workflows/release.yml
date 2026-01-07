@@ -1,0 +1,234 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger on version tags like v1.0.0
+  workflow_dispatch:  # Allow manual triggering
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  build-and-release:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install Android SDK
+        run: |
+          brew install android-sdk
+          echo "ANDROID_HOME=/usr/local/share/android-sdk" >> $GITHUB_ENV
+          echo "/usr/local/share/android-sdk/platform-tools" >> $GITHUB_PATH
+
+      - name: Extract version number
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build unsigned release package
+        run: |
+          cd Scripts
+          chmod +x package-release.sh
+          ./package-release.sh "${{ env.VERSION }}"
+
+      - name: Build signed release package
+        if: ${{ secrets.SIGNING_IDENTITY != '' }}
+        env:
+          SIGNING_IDENTITY: ${{ secrets.SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          cd Scripts
+          ./package-release.sh "${{ env.VERSION }}"
+
+      - name: Calculate checksums
+        id: checksums
+        run: |
+          cd Build/Distribution
+
+          # Check which files were created
+          UNSIGNED_FILE="Xamrock-Studio-${{ env.VERSION }}.zip"
+          SIGNED_FILE="Xamrock-Studio-${{ env.VERSION }}-Signed.zip"
+
+          if [ -f "$UNSIGNED_FILE" ]; then
+            UNSIGNED_SHA256=$(shasum -a 256 "$UNSIGNED_FILE" | cut -d ' ' -f 1)
+            echo "unsigned_sha256=$UNSIGNED_SHA256" >> $GITHUB_OUTPUT
+            echo "has_unsigned=true" >> $GITHUB_OUTPUT
+          fi
+
+          if [ -f "$SIGNED_FILE" ]; then
+            SIGNED_SHA256=$(shasum -a 256 "$SIGNED_FILE" | cut -d ' ' -f 1)
+            echo "signed_sha256=$SIGNED_SHA256" >> $GITHUB_OUTPUT
+            echo "has_signed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release Notes
+        id: release_notes
+        run: |
+          cat > release_notes.md << 'EOF'
+          ## Xamrock Studio v${{ env.VERSION }}
+
+          ### 📥 Downloads
+
+          EOF
+
+          # Add signed version if available
+          if [ "${{ steps.checksums.outputs.has_signed }}" = "true" ]; then
+            cat >> release_notes.md << 'EOF'
+          **Recommended: Signed & Notarized** (Best for non-technical users)
+          - Download: `Xamrock-Studio-${{ env.VERSION }}-Signed.zip`
+          - ✅ **No security warnings** - Double-click to install
+          - ✅ Verified by Apple
+          - 📦 Includes iOS & Android test frameworks
+
+          EOF
+          fi
+
+          # Add unsigned version
+          if [ "${{ steps.checksums.outputs.has_unsigned }}" = "true" ]; then
+            cat >> release_notes.md << 'EOF'
+          **Open Source Build** (For developers & contributors)
+          - Download: `Xamrock-Studio-${{ env.VERSION }}.zip`
+          - ⚠️ Requires manual security approval (see instructions below)
+          - 📦 Includes iOS & Android test frameworks
+
+          EOF
+          fi
+
+          cat >> release_notes.md << 'EOF'
+
+          ### 🚀 Installation
+
+          EOF
+
+          # Signed version instructions
+          if [ "${{ steps.checksums.outputs.has_signed }}" = "true" ]; then
+            cat >> release_notes.md << 'EOF'
+          **Signed Version:**
+          1. Download `Xamrock-Studio-${{ env.VERSION }}-Signed.zip`
+          2. Double-click to extract
+          3. Drag **Xamrock Studio.app** to Applications folder
+          4. Double-click to open - **no additional steps needed!** ✨
+
+          EOF
+          fi
+
+          # Unsigned version instructions
+          if [ "${{ steps.checksums.outputs.has_unsigned }}" = "true" ]; then
+            cat >> release_notes.md << 'EOF'
+          **Unsigned Version:**
+          1. Download `Xamrock-Studio-${{ env.VERSION }}.zip`
+          2. Double-click to extract
+          3. Drag **Xamrock Studio.app** to Applications folder
+          4. **Right-click** the app → Select **"Open"** → Click **"Open"** in the dialog
+             - This is required only on first launch
+             - macOS will remember your choice for future launches
+
+          <details>
+          <summary>Why do I need to right-click?</summary>
+
+          The unsigned version uses ad-hoc signing for open-source distribution. macOS Gatekeeper requires this one-time approval. This is normal for free/open-source Mac apps.
+
+          If you prefer a smoother experience, download the signed version above.
+          </details>
+
+          EOF
+          fi
+
+          cat >> release_notes.md << 'EOF'
+
+          ### ✅ Requirements
+
+          **macOS**
+          - macOS 14.6 or later
+
+          **iOS Testing**
+          - Xcode 14.0 or later
+
+          **Android Testing**
+          - Android SDK Platform Tools (`adb`)
+          - Java JDK 17 or later
+
+          ### 🔒 Checksums
+
+          Verify your download with SHA256:
+
+          EOF
+
+          if [ "${{ steps.checksums.outputs.has_signed }}" = "true" ]; then
+            cat >> release_notes.md << 'EOF'
+          **Signed version:**
+          ```
+          ${{ steps.checksums.outputs.signed_sha256 }}  Xamrock-Studio-${{ env.VERSION }}-Signed.zip
+          ```
+
+          EOF
+          fi
+
+          if [ "${{ steps.checksums.outputs.has_unsigned }}" = "true" ]; then
+            cat >> release_notes.md << 'EOF'
+          **Unsigned version:**
+          ```
+          ${{ steps.checksums.outputs.unsigned_sha256 }}  Xamrock-Studio-${{ env.VERSION }}.zip
+          ```
+
+          EOF
+          fi
+
+          cat >> release_notes.md << 'EOF'
+
+          Verify:
+          ```bash
+          shasum -a 256 Xamrock-Studio-*.zip
+          ```
+          EOF
+
+          # Expand variables in the markdown
+          eval "echo \"$(cat release_notes.md)\"" > release_notes_final.md
+
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          cat release_notes_final.md >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: Xamrock Studio v${{ env.VERSION }}
+          body: ${{ env.RELEASE_NOTES }}
+          draft: false
+          prerelease: false
+          files: |
+            Build/Distribution/Xamrock-Studio-${{ env.VERSION }}*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: xamrock-studio-${{ env.VERSION }}
+          path: Build/Distribution/*.zip
+          retention-days: 90

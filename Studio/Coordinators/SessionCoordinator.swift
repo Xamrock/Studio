@@ -9,8 +9,10 @@ class SessionCoordinator: ObservableObject {
     @Published var connectionStatus: String?
 
     private var testRunner: TestRunnerService?
+    private var androidTestRunner: AndroidTestRunnerService?
     private var communicationService: CommunicationService?
     private(set) var interactionService: InteractionService?
+    private var currentPlatform: DevicePlatform?
 
     func startSession(
         bundleID: String,
@@ -18,62 +20,20 @@ class SessionCoordinator: ObservableObject {
         skipAppLaunch: Bool
     ) async throws {
         guard !bundleID.isEmpty else {
-            errorMessage = "Please enter a bundle ID"
+            errorMessage = "Please enter a \(device.platform == .ios ? "bundle ID" : "package name")"
             throw SessionError.invalidBundleID
         }
 
         errorMessage = nil
         isRecording = true
+        currentPlatform = device.platform
 
         do {
-            let deviceIP = device.isPhysical ? "iPhone.local" : "localhost"
-
-            let commService = try CommunicationService(deviceIP: deviceIP)
-            communicationService = commService
-            interactionService = InteractionService(communicationService: commService)
-
-            let runner = TestRunnerService(communicationService: commService)
-            testRunner = runner
-
-            try await runner.startSession(
-                bundleID: bundleID,
-                deviceID: device.id,
-                skipAppLaunch: skipAppLaunch
-            )
-
-            // Wait for server to become ready with polling and exponential backoff
-            let maxAttempts = 30  // 30 attempts over ~60 seconds
-            var attempt = 0
-            var isHealthy = false
-
-            connectionStatus = "Waiting for test server to start..."
-
-            while attempt < maxAttempts && !isHealthy {
-                attempt += 1
-
-                // Calculate delay: start at 1s, cap at 3s
-                let baseDelay = min(1.0 + Double(attempt - 1) * 0.1, 3.0)
-                let delayNanoseconds = UInt64(baseDelay * 1_000_000_000)
-
-                try await Task.sleep(nanoseconds: delayNanoseconds)
-
-                connectionStatus = "Attempting to connect... (\(attempt)/\(maxAttempts))"
-
-                if let healthy = await communicationService?.checkHealth(), healthy {
-                    isHealthy = true
-                    connectionStatus = "Connected!"
-                    break
-                }
-
-                try Task.checkCancellation()
-            }
-
-            guard isHealthy else {
-                let deviceType = device.isPhysical ? "physical device" : "simulator"
-                throw SessionError.connectionFailed(
-                    deviceType: deviceType,
-                    attempts: attempt
-                )
+            switch device.platform {
+            case .ios:
+                try await startIOSSession(bundleID: bundleID, device: device, skipAppLaunch: skipAppLaunch)
+            case .android:
+                try await startAndroidSession(packageName: bundleID, device: device, skipAppLaunch: skipAppLaunch)
             }
 
             isTestRunning = true
@@ -86,24 +46,119 @@ class SessionCoordinator: ObservableObject {
         }
     }
 
+    private func startIOSSession(
+        bundleID: String,
+        device: Device,
+        skipAppLaunch: Bool
+    ) async throws {
+        let deviceIP = device.isPhysical ? "iPhone.local" : "localhost"
+
+        let commService = try CommunicationService(deviceIP: deviceIP)
+        communicationService = commService
+        interactionService = InteractionService(communicationService: commService)
+
+        let runner = TestRunnerService(communicationService: commService)
+        testRunner = runner
+
+        try await runner.startSession(
+            bundleID: bundleID,
+            deviceID: device.id,
+            skipAppLaunch: skipAppLaunch
+        )
+
+        // Wait for server to become ready with polling and exponential backoff
+        try await waitForServerHealth(deviceType: device.isPhysical ? "physical device" : "simulator")
+    }
+
+    private func startAndroidSession(
+        packageName: String,
+        device: Device,
+        skipAppLaunch: Bool
+    ) async throws {
+        // Android always uses localhost with port forwarding
+        let commService = try CommunicationService(deviceIP: "localhost")
+        communicationService = commService
+        interactionService = InteractionService(communicationService: commService)
+
+        let runner = AndroidTestRunnerService(communicationService: commService)
+        androidTestRunner = runner
+
+        try await runner.startSession(
+            packageName: packageName,
+            deviceID: device.id,
+            skipAppLaunch: skipAppLaunch
+        )
+
+        // Wait for server to become ready
+        try await waitForServerHealth(deviceType: device.isPhysical ? "physical device" : "emulator")
+    }
+
+    private func waitForServerHealth(deviceType: String) async throws {
+        let maxAttempts = 30  // 30 attempts over ~60 seconds
+        var attempt = 0
+        var isHealthy = false
+
+        connectionStatus = "Waiting for test server to start..."
+
+        while attempt < maxAttempts && !isHealthy {
+            attempt += 1
+
+            // Calculate delay: start at 1s, cap at 3s
+            let baseDelay = min(1.0 + Double(attempt - 1) * 0.1, 3.0)
+            let delayNanoseconds = UInt64(baseDelay * 1_000_000_000)
+
+            try await Task.sleep(nanoseconds: delayNanoseconds)
+
+            connectionStatus = "Attempting to connect... (\(attempt)/\(maxAttempts))"
+
+            if let healthy = await communicationService?.checkHealth(), healthy {
+                isHealthy = true
+                connectionStatus = "Connected!"
+                break
+            }
+
+            try Task.checkCancellation()
+        }
+
+        guard isHealthy else {
+            throw SessionError.connectionFailed(
+                deviceType: deviceType,
+                attempts: attempt
+            )
+        }
+    }
+
     func stopSession() async {
-        await testRunner?.stopSession()
-        testRunner = nil
+        if let platform = currentPlatform {
+            switch platform {
+            case .ios:
+                await testRunner?.stopSession()
+                testRunner = nil
+            case .android:
+                await androidTestRunner?.stopSession()
+                androidTestRunner = nil
+            }
+        }
+
         communicationService = nil
         interactionService = nil
         isRecording = false
         isTestRunning = false
+        currentPlatform = nil
     }
 
     func captureSnapshot() async throws -> HierarchySnapshot {
-        guard let testRunner = testRunner else {
+        if let testRunner = testRunner {
+            return try await testRunner.captureSnapshot()
+        } else if let androidTestRunner = androidTestRunner {
+            return try await androidTestRunner.captureSnapshot()
+        } else {
             throw SessionError.sessionNotStarted
         }
-        return try await testRunner.captureSnapshot()
     }
 
     var hasActiveSession: Bool {
-        testRunner != nil && isTestRunning
+        (testRunner != nil || androidTestRunner != nil) && isTestRunning
     }
 }
 
