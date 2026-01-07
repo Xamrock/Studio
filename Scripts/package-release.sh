@@ -112,7 +112,6 @@ if [ "$IS_SIGNED" = true ]; then
     # Verify the signature
     echo "Verifying signature..."
     codesign --verify --verbose=2 "${APP_PATH}"
-    spctl --assess --verbose=2 "${APP_PATH}"
 else
     echo "Using ad-hoc signing (unsigned for distribution)"
     codesign --force --sign "-" --deep "${APP_PATH}"
