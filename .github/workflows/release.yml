@@ -14,6 +14,8 @@ on:
 jobs:
   build-and-release:
     runs-on: macos-14
+    permissions:
+      contents: write  # Required to create releases and upload assets
 
     steps:
       - name: Checkout code
