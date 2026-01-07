@@ -281,7 +281,8 @@ final class StudioRecorderUITest: XCTestCase {
                 "width": screenshotPixelSize.width,
                 "height": screenshotPixelSize.height
             ],
-            "displayScale": displayScale
+            "displayScale": displayScale,
+            "platform": "ios"
         ]
 
         // Convert to JSON string

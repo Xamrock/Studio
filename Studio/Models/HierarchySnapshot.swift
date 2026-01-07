@@ -8,9 +8,10 @@ struct HierarchySnapshot: Codable {
     let appFrame: FrameData?
     let screenBounds: SizeData?
     let displayScale: Double?
+    let platform: DevicePlatform?
 
     enum CodingKeys: String, CodingKey {
-        case timestamp, elements, screenshot, appFrame, screenBounds, displayScale
+        case timestamp, elements, screenshot, appFrame, screenBounds, displayScale, platform
     }
 
     init(from decoder: Decoder) throws {
@@ -21,6 +22,7 @@ struct HierarchySnapshot: Codable {
         appFrame = try container.decodeIfPresent(FrameData.self, forKey: .appFrame)
         screenBounds = try container.decodeIfPresent(SizeData.self, forKey: .screenBounds)
         displayScale = try container.decodeIfPresent(Double.self, forKey: .displayScale)
+        platform = try container.decodeIfPresent(DevicePlatform.self, forKey: .platform)
     }
 }
 
@@ -36,10 +38,11 @@ struct SnapshotElement: Codable, Identifiable {
     let frame: FrameData
     let identifier: String
     let children: [SnapshotElement]
+    let platformMetadata: PlatformMetadata?
 
     enum CodingKeys: String, CodingKey {
         case elementType, label, title, value, placeholderValue
-        case isEnabled, isSelected, frame, identifier, children
+        case isEnabled, isSelected, frame, identifier, children, platformMetadata
     }
 
     init(from decoder: Decoder) throws {
@@ -55,6 +58,7 @@ struct SnapshotElement: Codable, Identifiable {
         self.frame = try container.decode(FrameData.self, forKey: .frame)
         self.identifier = try container.decode(String.self, forKey: .identifier)
         self.children = try container.decode([SnapshotElement].self, forKey: .children)
+        self.platformMetadata = try container.decodeIfPresent(PlatformMetadata.self, forKey: .platformMetadata)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -69,6 +73,7 @@ struct SnapshotElement: Codable, Identifiable {
         try container.encode(frame, forKey: .frame)
         try container.encode(identifier, forKey: .identifier)
         try container.encode(children, forKey: .children)
+        try container.encodeIfPresent(platformMetadata, forKey: .platformMetadata)
     }
 
     var cgRect: CGRect {
@@ -77,6 +82,13 @@ struct SnapshotElement: Codable, Identifiable {
 
     var isInteractive: Bool {
         guard isEnabled else { return false }
+
+        // For Android elements, check platform metadata for clickability
+        if let metadata = platformMetadata {
+            if metadata.isClickable == true || metadata.isLongClickable == true {
+                return true
+            }
+        }
 
         let definitelyInteractiveTypes: Set<UInt> = [
             9,  // Button
@@ -250,6 +262,40 @@ enum InteractionType: String, Codable {
     case doubleTap
     case coordinateTap
     case cellInteraction
+}
+
+struct PlatformMetadata: Codable {
+    // Android-specific properties
+    let androidClassName: String?
+    let isClickable: Bool?
+    let isLongClickable: Bool?
+    let isScrollable: Bool?
+    let isFocusable: Bool?
+    let isCheckable: Bool?
+    let isPassword: Bool?
+
+    // iOS-specific properties (for future use)
+    let iosHittable: Bool?
+
+    init(
+        androidClassName: String? = nil,
+        isClickable: Bool? = nil,
+        isLongClickable: Bool? = nil,
+        isScrollable: Bool? = nil,
+        isFocusable: Bool? = nil,
+        isCheckable: Bool? = nil,
+        isPassword: Bool? = nil,
+        iosHittable: Bool? = nil
+    ) {
+        self.androidClassName = androidClassName
+        self.isClickable = isClickable
+        self.isLongClickable = isLongClickable
+        self.isScrollable = isScrollable
+        self.isFocusable = isFocusable
+        self.isCheckable = isCheckable
+        self.isPassword = isPassword
+        self.iosHittable = iosHittable
+    }
 }
 
 struct FrameData: Codable {

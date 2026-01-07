@@ -8,10 +8,15 @@ class DeviceManager: ObservableObject, DeviceManaging {
     @Published var isLoadingDevices = false
     @Published var errorMessage: String?
 
-    private let deviceService: DeviceService
+    private let iosDeviceService: DeviceService
+    private let androidDeviceService: DeviceService
 
-    init(deviceService: DeviceService = IOSDeviceService()) {
-        self.deviceService = deviceService
+    init(
+        iosDeviceService: DeviceService = IOSDeviceService(),
+        androidDeviceService: DeviceService = AndroidDeviceService()
+    ) {
+        self.iosDeviceService = iosDeviceService
+        self.androidDeviceService = androidDeviceService
     }
 
     func loadDevices() async throws -> [Device] {
@@ -20,22 +25,53 @@ class DeviceManager: ObservableObject, DeviceManaging {
 
         defer { isLoadingDevices = false }
 
+        // Fetch devices from both platforms, handling errors individually
+        var allDevices: [Device] = []
+
+        // Try to fetch iOS devices
         do {
-            let allDevices = try await deviceService.fetchDevices()
-            availableDevices = allDevices.filter { $0.isAvailable }
-
-            if selectedDevice == nil {
-                selectedDevice = try await findDefaultDevice()
-            }
-
-            return availableDevices
+            let iosDevices = try await iosDeviceService.fetchDevices()
+            allDevices.append(contentsOf: iosDevices)
         } catch {
-            errorMessage = "Failed to load devices: \(error.localizedDescription)"
-            throw error
+            // Continue to try Android devices
         }
+
+        // Try to fetch Android devices
+        do {
+            let androidDevices = try await androidDeviceService.fetchDevices()
+            allDevices.append(contentsOf: androidDevices)
+        } catch {
+            // Continue with whatever devices we have
+        }
+
+        // Filter available devices
+        availableDevices = allDevices.filter { $0.isAvailable }
+
+        // Sort devices: physical first, then by platform (iOS, Android), then by name
+        availableDevices.sort { lhs, rhs in
+            if lhs.isPhysical != rhs.isPhysical {
+                return lhs.isPhysical
+            }
+            if lhs.platform != rhs.platform {
+                return lhs.platform == .ios
+            }
+            return lhs.name < rhs.name
+        }
+
+        if selectedDevice == nil {
+            selectedDevice = try await findDefaultDevice()
+        }
+
+        return availableDevices
     }
 
     func findDefaultDevice() async throws -> Device? {
-        try await deviceService.findDefaultDevice()
+        // Prefer iOS physical device
+        if let iosDevice = try await iosDeviceService.findDefaultDevice() {
+            return iosDevice
+        }
+
+        // Fall back to Android device
+        return try await androidDeviceService.findDefaultDevice()
     }
 }

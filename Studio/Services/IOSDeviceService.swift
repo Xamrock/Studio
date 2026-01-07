@@ -63,7 +63,8 @@ class IOSDeviceService: DeviceService {
                     runtime: runtimeName,
                     state: state,
                     isAvailable: isAvailable,
-                    isPhysical: false
+                    isPhysical: false,
+                    platform: .ios
                 ))
             }
         }
@@ -134,7 +135,8 @@ class IOSDeviceService: DeviceService {
                 runtime: "iOS \(version)",
                 state: "Connected",
                 isAvailable: true,
-                isPhysical: true
+                isPhysical: true,
+                platform: .ios
             )
             devices.append(device)
         }
