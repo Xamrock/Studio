@@ -151,10 +151,10 @@ if [ "$IS_SIGNED" = true ]; then
             --team-id "$APPLE_TEAM_ID" \
             --wait 2>&1)
 
-        NOTARIZE_EXIT_CODE=$?
         echo "$SUBMISSION_OUTPUT"
 
-        if [ $NOTARIZE_EXIT_CODE -eq 0 ]; then
+        # Check if notarization succeeded (status: Accepted)
+        if echo "$SUBMISSION_OUTPUT" | grep -q "status: Accepted"; then
             echo "✅ Notarization succeeded!"
 
             # Unzip, staple, and re-zip
