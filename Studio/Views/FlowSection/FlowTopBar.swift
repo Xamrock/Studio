@@ -30,7 +30,7 @@ struct FlowTopBar: View {
                 .frame(height: 20)
 
             Button {
-                viewModel.undo(graphViewModel: graphViewModel)
+                viewModel.undo(with: graphViewModel)
             } label: {
                 Image(systemName: "arrow.uturn.backward")
                     .font(.callout)
@@ -42,7 +42,7 @@ struct FlowTopBar: View {
             .help("Undo (⌘Z)")
 
             Button {
-                viewModel.redo(graphViewModel: graphViewModel)
+                viewModel.redo(with: graphViewModel)
             } label: {
                 Image(systemName: "arrow.uturn.forward")
                     .font(.callout)

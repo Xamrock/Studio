@@ -314,10 +314,9 @@ class RecordingSessionViewModel: ObservableObject, RecordingSessionViewModelProt
     }
 
     // MARK: - Node Management
-    func mergeNodes(draggedNodeId: UUID, targetNodeId: UUID, graphViewModel: FlowGraphViewModel) {
-        // Capture state before merge for undo functionality
-        graphViewModel.captureState(screens: capturedScreens, edges: navigationEdges)
-        // Transfer all edges from dragged node to target node by creating new edges
+    func mergeNodes(draggedNodeId: UUID, targetNodeId: UUID, stateManager: UndoRedoStateManaging) {
+        stateManager.captureState(screens: capturedScreens, edges: navigationEdges)
+
         var updatedEdges: [NavigationEdge] = []
         var seenEdges: Set<String> = []
 
@@ -325,7 +324,6 @@ class RecordingSessionViewModel: ObservableObject, RecordingSessionViewModelProt
             var newSourceId = edge.sourceScreenId
             var newTargetId = edge.targetScreenId
 
-            // Update IDs if they reference the dragged node
             if newSourceId == draggedNodeId {
                 newSourceId = targetNodeId
             }
@@ -333,19 +331,16 @@ class RecordingSessionViewModel: ObservableObject, RecordingSessionViewModelProt
                 newTargetId = targetNodeId
             }
 
-            // Skip self-referencing edges
             if newSourceId == newTargetId {
                 continue
             }
 
-            // Skip duplicate edges
             let edgeKey = "\(newSourceId)-\(newTargetId)"
             if seenEdges.contains(edgeKey) {
                 continue
             }
             seenEdges.insert(edgeKey)
 
-            // Create new edge with updated IDs if needed
             if newSourceId != edge.sourceScreenId || newTargetId != edge.targetScreenId {
                 let updatedEdge = NavigationEdge(
                     id: edge.id,
@@ -367,24 +362,20 @@ class RecordingSessionViewModel: ObservableObject, RecordingSessionViewModelProt
         }
 
         navigationEdges = updatedEdges
-
-        // Delete the dragged node
         capturedScreens.removeAll { $0.id == draggedNodeId }
     }
 
-    func undo(graphViewModel: FlowGraphViewModel) {
+    func undo(with graphViewModel: FlowGraphViewModel) {
         if let snapshot = graphViewModel.undo(currentScreens: capturedScreens, currentEdges: navigationEdges) {
             capturedScreens = snapshot.screens
             navigationEdges = snapshot.edges
         }
     }
 
-    func redo(graphViewModel: FlowGraphViewModel) {
+    func redo(with graphViewModel: FlowGraphViewModel) {
         if let snapshot = graphViewModel.redo() {
             capturedScreens = snapshot.screens
             navigationEdges = snapshot.edges
-
-            // Save current state to undo stack after redo
             graphViewModel.captureState(screens: capturedScreens, edges: navigationEdges)
         }
     }

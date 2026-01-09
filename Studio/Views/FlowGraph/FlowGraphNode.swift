@@ -15,7 +15,6 @@ struct FlowGraphNode: View {
 
     @State private var isDragging = false
 
-    // Computed properties for styling
     private var strokeColor: Color {
         if isDropTarget { return .green }
         if isEdgeCreationSource { return .orange }

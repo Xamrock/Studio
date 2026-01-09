@@ -1,8 +1,12 @@
 import SwiftUI
 import Combine
 
+protocol UndoRedoStateManaging {
+    func captureState(screens: [CapturedScreen], edges: [NavigationEdge])
+}
+
 @MainActor
-class FlowGraphViewModel: ObservableObject {
+class FlowGraphViewModel: ObservableObject, UndoRedoStateManaging {
     @Published var zoom: CGFloat = 1.0
     @Published var offset: CGPoint = .zero
     @Published var selectedNodeIds: Set<UUID> = []
@@ -36,6 +40,12 @@ class FlowGraphViewModel: ObservableObject {
         let screens: [CapturedScreen]
         let edges: [NavigationEdge]
         let timestamp: Date
+
+        init(screens: [CapturedScreen], edges: [NavigationEdge], timestamp: Date = Date()) {
+            self.screens = screens
+            self.edges = edges
+            self.timestamp = timestamp
+        }
     }
 
     func handleNodeClickForEdgeCreation(screenId: UUID) {
@@ -129,20 +139,14 @@ class FlowGraphViewModel: ObservableObject {
     }
 
     func captureState(screens: [CapturedScreen], edges: [NavigationEdge]) {
-        let snapshot = GraphSnapshot(
-            screens: screens,
-            edges: edges,
-            timestamp: Date()
-        )
+        let snapshot = GraphSnapshot(screens: screens, edges: edges)
 
         undoStack.append(snapshot)
 
-        // Limit stack size to prevent memory issues
         if undoStack.count > maxUndoStackSize {
             undoStack.removeFirst()
         }
 
-        // Clear redo stack when new action is performed
         redoStack.removeAll()
     }
 
@@ -157,15 +161,9 @@ class FlowGraphViewModel: ObservableObject {
     func undo(currentScreens: [CapturedScreen], currentEdges: [NavigationEdge]) -> (screens: [CapturedScreen], edges: [NavigationEdge])? {
         guard !undoStack.isEmpty else { return nil }
 
-        // Save current state to redo stack
-        let currentSnapshot = GraphSnapshot(
-            screens: currentScreens,
-            edges: currentEdges,
-            timestamp: Date()
-        )
+        let currentSnapshot = GraphSnapshot(screens: currentScreens, edges: currentEdges)
         redoStack.append(currentSnapshot)
 
-        // Pop from undo stack
         let previousSnapshot = undoStack.removeLast()
         return (screens: previousSnapshot.screens, edges: previousSnapshot.edges)
     }
@@ -173,7 +171,6 @@ class FlowGraphViewModel: ObservableObject {
     func redo() -> (screens: [CapturedScreen], edges: [NavigationEdge])? {
         guard !redoStack.isEmpty else { return nil }
 
-        // Pop from redo stack
         let nextSnapshot = redoStack.removeLast()
         return (screens: nextSnapshot.screens, edges: nextSnapshot.edges)
     }
@@ -181,5 +178,39 @@ class FlowGraphViewModel: ObservableObject {
     func clearUndoHistory() {
         undoStack.removeAll()
         redoStack.removeAll()
+    }
+
+    func detectDropTarget(
+        draggedScreenId: UUID,
+        draggedPosition: CGPoint,
+        screens: [CapturedScreen],
+        nodeWidth: CGFloat = 180,
+        nodeHeight: CGFloat = 260,
+        defaultPositionProvider: (CapturedScreen) -> CGPoint
+    ) -> UUID? {
+        let draggedBounds = CGRect(
+            x: draggedPosition.x - nodeWidth / 2,
+            y: draggedPosition.y - nodeHeight / 2,
+            width: nodeWidth,
+            height: nodeHeight
+        )
+
+        for screen in screens {
+            guard screen.id != draggedScreenId else { continue }
+
+            let screenPos = screen.graphPosition ?? defaultPositionProvider(screen)
+            let screenBounds = CGRect(
+                x: screenPos.x - nodeWidth / 2,
+                y: screenPos.y - nodeHeight / 2,
+                width: nodeWidth,
+                height: nodeHeight
+            )
+
+            if draggedBounds.intersects(screenBounds) {
+                return screen.id
+            }
+        }
+
+        return nil
     }
 }
