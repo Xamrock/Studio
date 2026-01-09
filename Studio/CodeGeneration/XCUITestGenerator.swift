@@ -16,7 +16,7 @@ class XCUITestGenerator: CodeGenerationStrategy {
 
             override func setUpWithError() throws {
                 continueAfterFailure = false
-                app = XCUIApplication()
+                app = XCUIApplication(bundleIdentifier: "\(bundleID)")
                 app.launch()
             }
 
