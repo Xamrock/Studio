@@ -59,7 +59,7 @@ class EspressoGenerator: CodeGenerationStrategy {
         code += "\(indentation)// \(step.description)\n"
 
         switch step.action {
-        case .tap(let identifier, let label):
+        case .tap(let identifier, let label, _):
             if !identifier.isEmpty && identifier != "manual_edge" {
                 code += "\(indentation)onView(withId(R.id.\(sanitizeResourceID(identifier))))\n"
                 code += "\(indentation)    .perform(click())\n"
@@ -70,7 +70,7 @@ class EspressoGenerator: CodeGenerationStrategy {
                 code += "\(indentation)// TODO: Tap element (identifier unknown)\n"
             }
 
-        case .typeText(let identifier, let text):
+        case .typeText(let identifier, let text, _):
             if !identifier.isEmpty && identifier != "manual_edge" {
                 code += "\(indentation)onView(withId(R.id.\(sanitizeResourceID(identifier))))\n"
                 code += "\(indentation)    .perform(click())\n"
@@ -86,7 +86,7 @@ class EspressoGenerator: CodeGenerationStrategy {
         case .verify(let condition):
             code += "\(indentation)// TODO: Verify \(condition)\n"
 
-        case .swipe(let direction, let identifier, let label):
+        case .swipe(let direction, let identifier, let label, _):
             if !identifier.isEmpty && identifier != "manual_edge" {
                 code += "\(indentation)onView(withId(R.id.\(sanitizeResourceID(identifier))))\n"
                 code += "\(indentation)    .perform(swipe\(direction.rawValue.capitalized)())\n"
@@ -98,7 +98,7 @@ class EspressoGenerator: CodeGenerationStrategy {
                 code += "\(indentation)onView(isRoot()).perform(swipe\(direction.rawValue.capitalized)())\n"
             }
 
-        case .longPress(let identifier, let label, let duration):
+        case .longPress(let identifier, let label, _, _):
             if !identifier.isEmpty && identifier != "manual_edge" {
                 code += "\(indentation)onView(withId(R.id.\(sanitizeResourceID(identifier))))\n"
                 code += "\(indentation)    .perform(longClick())\n"
@@ -109,7 +109,7 @@ class EspressoGenerator: CodeGenerationStrategy {
                 code += "\(indentation)// TODO: Long press element (identifier unknown)\n"
             }
 
-        case .doubleTap(let identifier, let label):
+        case .doubleTap(let identifier, let label, _):
             if !identifier.isEmpty && identifier != "manual_edge" {
                 code += "\(indentation)onView(withId(R.id.\(sanitizeResourceID(identifier))))\n"
                 code += "\(indentation)    .perform(doubleClick())\n"
@@ -124,7 +124,7 @@ class EspressoGenerator: CodeGenerationStrategy {
             code += "\(indentation)// TODO: Tap at coordinate (\(Int(x)), \(Int(y)))\n"
             code += "\(indentation)// Note: Coordinate-based taps require custom implementation in Espresso\n"
 
-        case .tapCell(let index, let identifier, let label):
+        case .tapCell(let index, let identifier, let label, _):
             if !identifier.isEmpty && identifier != "manual_edge" {
                 code += "\(indentation)onView(withId(R.id.\(sanitizeResourceID(identifier))))\n"
                 code += "\(indentation)    .perform(scrollToPosition(\(index)))\n"

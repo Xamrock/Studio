@@ -33,7 +33,7 @@ class MaestroGenerator: CodeGenerationStrategy {
         yaml += "# \(step.description)\n"
 
         switch step.action {
-        case .tap(let identifier, let label):
+        case .tap(let identifier, let label, _):
             if !label.isEmpty {
                 yaml += "- tapOn: \"\(label)\"\n"
             } else if !identifier.isEmpty && identifier != "manual_edge" {
@@ -43,7 +43,7 @@ class MaestroGenerator: CodeGenerationStrategy {
                 yaml += "# TODO: Tap action (identifier unknown)\n"
             }
 
-        case .typeText(let identifier, let text):
+        case .typeText(let identifier, let text, _):
             yaml += "- tapOn:\n"
             yaml += "    id: \"\(identifier)\"\n"
             yaml += "- inputText: \"\(text)\"\n"
@@ -54,7 +54,7 @@ class MaestroGenerator: CodeGenerationStrategy {
         case .verify(let condition):
             yaml += "# TODO: Verify \(condition)\n"
 
-        case .swipe(let direction, let identifier, let label):
+        case .swipe(let direction, let identifier, let label, _):
             yaml += "- swipe:\n"
             yaml += "    direction: \(direction.rawValue.uppercased())\n"
             if !identifier.isEmpty && identifier != "manual_edge" {
@@ -63,7 +63,7 @@ class MaestroGenerator: CodeGenerationStrategy {
                 yaml += "    text: \"\(label)\"\n"
             }
 
-        case .longPress(let identifier, let label, let duration):
+        case .longPress(let identifier, let label, let duration, _):
             yaml += "- longPressOn:\n"
             if !identifier.isEmpty && identifier != "manual_edge" {
                 yaml += "    id: \"\(identifier)\"\n"
@@ -72,7 +72,7 @@ class MaestroGenerator: CodeGenerationStrategy {
             }
             yaml += "    duration: \(Int(duration * 1000))ms\n"
 
-        case .doubleTap(let identifier, let label):
+        case .doubleTap(let identifier, let label, _):
             yaml += "- tapOn:\n"
             if !identifier.isEmpty && identifier != "manual_edge" {
                 yaml += "    id: \"\(identifier)\"\n"
@@ -90,7 +90,7 @@ class MaestroGenerator: CodeGenerationStrategy {
             yaml += "- tapOn:\n"
             yaml += "    point: \(Int(x * 100))%,\(Int(y * 100))%\n"
 
-        case .tapCell(let index, _, let label):
+        case .tapCell(let index, _, let label, _):
             yaml += "- tapOn:\n"
             if !label.isEmpty {
                 yaml += "    text: \"\(label)\"\n"

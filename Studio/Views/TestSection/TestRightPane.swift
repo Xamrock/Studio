@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ExportRightPane: View {
+struct TestRightPane: View {
     @ObservedObject var viewModel: RecordingSessionViewModel
     @Binding var selectedFramework: CodeGenerationService.TestFramework
     @Binding var selectedGroups: Set<UUID>

@@ -13,6 +13,7 @@ struct NavigationEdge: Codable, Identifiable {
     var coordinateX: Double?  // For coordinate tap (normalized 0-1)
     var coordinateY: Double?  // For coordinate tap (normalized 0-1)
     var cellIndex: Int?  // For cell interactions
+    var elementType: UInt?  // XCUIElement.ElementType raw value from recording
 
     init(
         id: UUID = UUID(),
@@ -25,7 +26,8 @@ struct NavigationEdge: Codable, Identifiable {
         duration: Double? = nil,
         coordinateX: Double? = nil,
         coordinateY: Double? = nil,
-        cellIndex: Int? = nil
+        cellIndex: Int? = nil,
+        elementType: UInt? = nil
     ) {
         self.id = id
         self.sourceScreenId = sourceScreenId
@@ -38,5 +40,6 @@ struct NavigationEdge: Codable, Identifiable {
         self.coordinateX = coordinateX
         self.coordinateY = coordinateY
         self.cellIndex = cellIndex
+        self.elementType = elementType
     }
 }

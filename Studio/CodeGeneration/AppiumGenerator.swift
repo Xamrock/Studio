@@ -62,7 +62,7 @@ class AppiumGenerator: CodeGenerationStrategy {
         code += "\(indentation)// \(step.description)\n"
 
         switch step.action {
-        case .tap(let identifier, let label):
+        case .tap(let identifier, let label, _):
             if !identifier.isEmpty && identifier != "manual_edge" {
                 code += "\(indentation)const element = await driver.$('~\(identifier)');\n"
                 code += "\(indentation)await element.click();\n"
@@ -73,7 +73,7 @@ class AppiumGenerator: CodeGenerationStrategy {
                 code += "\(indentation)// TODO: Tap element (identifier unknown)\n"
             }
 
-        case .typeText(let identifier, let text):
+        case .typeText(let identifier, let text, _):
             code += "\(indentation)const textField = await driver.$('~\(identifier)');\n"
             code += "\(indentation)await textField.click();\n"
             code += "\(indentation)await textField.setValue('\(text)');\n"
@@ -84,7 +84,7 @@ class AppiumGenerator: CodeGenerationStrategy {
         case .verify(let condition):
             code += "\(indentation)// TODO: Verify \(condition)\n"
 
-        case .swipe(let direction, let identifier, let label):
+        case .swipe(let direction, let identifier, let label, _):
             let elementLocator = !identifier.isEmpty && identifier != "manual_edge"
                 ? "'~\(identifier)'"
                 : (!label.isEmpty ? "'~\(label)'" : "")
@@ -120,7 +120,7 @@ class AppiumGenerator: CodeGenerationStrategy {
             }
             code += "\(indentation)]);\n"
 
-        case .longPress(let identifier, let label, let duration):
+        case .longPress(let identifier, let label, let duration, _):
             if !identifier.isEmpty && identifier != "manual_edge" {
                 code += "\(indentation)const element = await driver.$('~\(identifier)');\n"
                 code += "\(indentation)await element.touchAction([\n"
@@ -139,7 +139,7 @@ class AppiumGenerator: CodeGenerationStrategy {
                 code += "\(indentation)// TODO: Long press element (identifier unknown)\n"
             }
 
-        case .doubleTap(let identifier, let label):
+        case .doubleTap(let identifier, let label, _):
             if !identifier.isEmpty && identifier != "manual_edge" {
                 code += "\(indentation)const element = await driver.$('~\(identifier)');\n"
                 code += "\(indentation)await element.click();\n"
@@ -157,7 +157,7 @@ class AppiumGenerator: CodeGenerationStrategy {
             code += "\(indentation)    { action: 'tap', x: \(Int(x)), y: \(Int(y)) }\n"
             code += "\(indentation)]);\n"
 
-        case .tapCell(let index, let identifier, let label):
+        case .tapCell(let index, let identifier, let label, _):
             if !identifier.isEmpty && identifier != "manual_edge" {
                 code += "\(indentation)const cells = await driver.$$('~\(identifier)');\n"
                 code += "\(indentation)await cells[\(index)].click();\n"

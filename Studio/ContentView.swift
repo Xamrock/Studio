@@ -29,8 +29,8 @@ struct ContentView: View {
                         selectedScreen: $selectedScreen
                     )
 
-                case .export:
-                    ExportSectionPlaceholder(
+                case .test:
+                    TestSectionPlaceholder(
                         viewModel: viewModel
                     )
                 }
@@ -89,10 +89,10 @@ struct FlowSectionPlaceholder: View {
     }
 }
 
-struct ExportSectionPlaceholder: View {
+struct TestSectionPlaceholder: View {
     @ObservedObject var viewModel: RecordingSessionViewModel
 
     var body: some View {
-        ExportSection(viewModel: viewModel)
+        TestSection(viewModel: viewModel)
     }
 }

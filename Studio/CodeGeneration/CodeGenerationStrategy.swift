@@ -4,15 +4,15 @@ import Foundation
 
 struct TestStep {
     enum Action {
-        case tap(identifier: String, label: String)
-        case typeText(identifier: String, text: String)
+        case tap(identifier: String, label: String, elementType: UInt?)
+        case typeText(identifier: String, text: String, elementType: UInt?)
         case wait(seconds: Double)
         case verify(condition: String)
-        case swipe(direction: SwipeDirection, identifier: String, label: String)
-        case longPress(identifier: String, label: String, duration: Double)
-        case doubleTap(identifier: String, label: String)
+        case swipe(direction: SwipeDirection, identifier: String, label: String, elementType: UInt?)
+        case longPress(identifier: String, label: String, duration: Double, elementType: UInt?)
+        case doubleTap(identifier: String, label: String, elementType: UInt?)
         case tapCoordinate(x: Double, y: Double)
-        case tapCell(index: Int, identifier: String, label: String)
+        case tapCell(index: Int, identifier: String, label: String, elementType: UInt?)
     }
 
     let description: String
@@ -53,57 +53,57 @@ class CodeGenerationUtilities {
             case .button, .navigation, .selection:
                 steps.append(TestStep(
                     description: stepDescription,
-                    action: .tap(identifier: edge.elementIdentifier, label: edge.elementLabel)
+                    action: .tap(identifier: edge.elementIdentifier, label: edge.elementLabel, elementType: edge.elementType)
                 ))
 
             case .textInput:
                 let text = extractTextFromScreenName(targetScreen?.name ?? "")
                 steps.append(TestStep(
                     description: stepDescription,
-                    action: .typeText(identifier: edge.elementIdentifier, text: text)
+                    action: .typeText(identifier: edge.elementIdentifier, text: text, elementType: edge.elementType)
                 ))
 
             case .toggle, .picker, .adjustment:
                 steps.append(TestStep(
                     description: stepDescription,
-                    action: .tap(identifier: edge.elementIdentifier, label: edge.elementLabel)
+                    action: .tap(identifier: edge.elementIdentifier, label: edge.elementLabel, elementType: edge.elementType)
                 ))
 
             case .swipeUp:
                 steps.append(TestStep(
                     description: stepDescription,
-                    action: .swipe(direction: .up, identifier: edge.elementIdentifier, label: edge.elementLabel)
+                    action: .swipe(direction: .up, identifier: edge.elementIdentifier, label: edge.elementLabel, elementType: edge.elementType)
                 ))
 
             case .swipeDown:
                 steps.append(TestStep(
                     description: stepDescription,
-                    action: .swipe(direction: .down, identifier: edge.elementIdentifier, label: edge.elementLabel)
+                    action: .swipe(direction: .down, identifier: edge.elementIdentifier, label: edge.elementLabel, elementType: edge.elementType)
                 ))
 
             case .swipeLeft:
                 steps.append(TestStep(
                     description: stepDescription,
-                    action: .swipe(direction: .left, identifier: edge.elementIdentifier, label: edge.elementLabel)
+                    action: .swipe(direction: .left, identifier: edge.elementIdentifier, label: edge.elementLabel, elementType: edge.elementType)
                 ))
 
             case .swipeRight:
                 steps.append(TestStep(
                     description: stepDescription,
-                    action: .swipe(direction: .right, identifier: edge.elementIdentifier, label: edge.elementLabel)
+                    action: .swipe(direction: .right, identifier: edge.elementIdentifier, label: edge.elementLabel, elementType: edge.elementType)
                 ))
 
             case .longPress:
                 let duration = edge.duration ?? 1.0
                 steps.append(TestStep(
                     description: stepDescription,
-                    action: .longPress(identifier: edge.elementIdentifier, label: edge.elementLabel, duration: duration)
+                    action: .longPress(identifier: edge.elementIdentifier, label: edge.elementLabel, duration: duration, elementType: edge.elementType)
                 ))
 
             case .doubleTap:
                 steps.append(TestStep(
                     description: stepDescription,
-                    action: .doubleTap(identifier: edge.elementIdentifier, label: edge.elementLabel)
+                    action: .doubleTap(identifier: edge.elementIdentifier, label: edge.elementLabel, elementType: edge.elementType)
                 ))
 
             case .coordinateTap:
@@ -118,13 +118,13 @@ class CodeGenerationUtilities {
                 let index = edge.cellIndex ?? 0
                 steps.append(TestStep(
                     description: stepDescription,
-                    action: .tapCell(index: index, identifier: edge.elementIdentifier, label: edge.elementLabel)
+                    action: .tapCell(index: index, identifier: edge.elementIdentifier, label: edge.elementLabel, elementType: edge.elementType)
                 ))
 
             case .none, .other:
                 steps.append(TestStep(
                     description: stepDescription,
-                    action: .tap(identifier: edge.elementIdentifier, label: edge.elementLabel)
+                    action: .tap(identifier: edge.elementIdentifier, label: edge.elementLabel, elementType: edge.elementType)
                 ))
             }
 

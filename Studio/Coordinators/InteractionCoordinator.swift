@@ -340,7 +340,8 @@ class InteractionCoordinator {
             interactionType: interactionType,
             elementLabel: element.displayLabel,
             elementIdentifier: element.identifier,
-            duration: duration
+            duration: duration,
+            elementType: element.elementType
         )
     }
 }

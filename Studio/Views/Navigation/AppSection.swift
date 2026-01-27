@@ -3,7 +3,7 @@ import Foundation
 enum AppSection: String, CaseIterable, Identifiable {
     case record = "Record"
     case flow = "Flow"
-    case export = "Export"
+    case test = "Test"
 
     var id: String { rawValue }
 
@@ -13,8 +13,8 @@ enum AppSection: String, CaseIterable, Identifiable {
             return "record.circle"
         case .flow:
             return "flowchart"
-        case .export:
-            return "doc.text.fill"
+        case .test:
+            return "play.rectangle.fill"
         }
     }
 
@@ -24,8 +24,8 @@ enum AppSection: String, CaseIterable, Identifiable {
             return "Record and capture UI interactions"
         case .flow:
             return "Visualize and edit navigation flow graph"
-        case .export:
-            return "Generate and export test code"
+        case .test:
+            return "Generate and run tests on devices"
         }
     }
 }
