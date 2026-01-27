@@ -49,6 +49,7 @@ mkdir -p "${BUILD_DIR}"
 # Step 1: Build Studio.app for macOS (arm64 only)
 echo ""
 echo "Step 1/5: Building Studio for macOS (arm64)..."
+echo "Setting version to ${VERSION}..."
 xcodebuild archive \
     -project "${PROJECT_DIR}/Studio.xcodeproj" \
     -scheme Studio \
@@ -59,7 +60,9 @@ xcodebuild archive \
     SKIP_INSTALL=NO \
     CODE_SIGN_IDENTITY="" \
     CODE_SIGNING_REQUIRED=NO \
-    CODE_SIGNING_ALLOWED=NO
+    CODE_SIGNING_ALLOWED=NO \
+    MARKETING_VERSION="${VERSION}" \
+    CURRENT_PROJECT_VERSION="${VERSION}"
 
 # Step 2: Export the app bundle
 echo ""
