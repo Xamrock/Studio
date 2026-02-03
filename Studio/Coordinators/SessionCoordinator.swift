@@ -13,6 +13,7 @@ class SessionCoordinator: ObservableObject {
     private var communicationService: CommunicationService?
     private(set) var interactionService: InteractionService?
     private var currentPlatform: DevicePlatform?
+    private let deviceConnectionService = DeviceConnectionService()
 
     func startSession(
         bundleID: String,
@@ -51,7 +52,35 @@ class SessionCoordinator: ObservableObject {
         device: Device,
         skipAppLaunch: Bool
     ) async throws {
-        let deviceIP = device.isPhysical ? "iPhone.local" : "localhost"
+        let deviceIP: String
+        
+        if device.isPhysical {
+            // Use DeviceConnectionService for physical devices
+            connectionStatus = "Detecting device connection type..."
+            
+            do {
+                let connectionInfo = try await deviceConnectionService.getConnectionInfo(for: device)
+                
+                switch connectionInfo.connectionType {
+                case .usb:
+                    connectionStatus = "Setting up USB connection..."
+                case .wifi:
+                    connectionStatus = "Connecting via WiFi..."
+                case .simulator:
+                    break
+                }
+                
+                deviceIP = try await deviceConnectionService.getConnectionAddress(for: connectionInfo)
+            } catch {
+                // Provide helpful error message based on connection failure
+                throw SessionError.deviceConnectionFailed(
+                    deviceName: device.name,
+                    underlyingError: error
+                )
+            }
+        } else {
+            deviceIP = "localhost"
+        }
 
         let commService = try CommunicationService(deviceIP: deviceIP)
         communicationService = commService
@@ -134,6 +163,7 @@ class SessionCoordinator: ObservableObject {
             case .ios:
                 await testRunner?.stopSession()
                 testRunner = nil
+                deviceConnectionService.disconnect()
             case .android:
                 await androidTestRunner?.stopSession()
                 androidTestRunner = nil
@@ -166,6 +196,7 @@ enum SessionError: Error, LocalizedError {
     case invalidBundleID
     case connectionFailed(deviceType: String, attempts: Int)
     case sessionNotStarted
+    case deviceConnectionFailed(deviceName: String, underlyingError: Error)
 
     var errorDescription: String? {
         switch self {
@@ -176,10 +207,10 @@ enum SessionError: Error, LocalizedError {
 
             if deviceType.contains("physical") {
                 message += "For physical devices:\n"
-                message += "• Ensure the device is on the same Wi-Fi network\n"
-                message += "• Check that the device is unlocked\n"
-                message += "• Verify iPhone.local is reachable (try: ping iPhone.local)\n"
-                message += "• Make sure no firewall is blocking port 8080\n\n"
+                message += "• For USB: Ensure the device is trusted and unlocked\n"
+                message += "• For WiFi: Ensure device and Mac are on the same network\n"
+                message += "• Make sure no firewall is blocking port 8080\n"
+                message += "• Try disconnecting and reconnecting the device\n\n"
             } else {
                 message += "For simulators:\n"
                 message += "• Try resetting the simulator\n"
@@ -191,6 +222,15 @@ enum SessionError: Error, LocalizedError {
             return message
         case .sessionNotStarted:
             return "Session not started"
+        case .deviceConnectionFailed(let deviceName, let underlyingError):
+            var message = "Failed to establish connection to \(deviceName).\n\n"
+            message += "Error: \(underlyingError.localizedDescription)\n\n"
+            message += "Troubleshooting:\n"
+            message += "• For USB: Make sure the device is unlocked and trusted\n"
+            message += "• For WiFi: Ensure device and Mac are on the same network\n"
+            message += "• Try unplugging and replugging the USB cable\n"
+            message += "• Restart the device if the issue persists"
+            return message
         }
     }
 }
